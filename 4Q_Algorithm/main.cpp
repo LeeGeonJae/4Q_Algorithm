@@ -12,13 +12,10 @@ const int HASH_MAP_SIZE = SHRT_MAX * 2;
 
 int main()
 {
-	hash<string> a;
-
 	srand(static_cast<unsigned int>(time(nullptr)));
 
-	LARGE_INTEGER timer, start, end;
-	float deltaTime;
 
+	// 해시 맵에 넣을 해시 데이터 배열 생성
 	vector<HashData> hashData;
 	hashData.reserve(HASH_DATA_SIZE);
 
@@ -50,6 +47,9 @@ int main()
 
 	// 직접 만든 해쉬 맵
 	{
+		LARGE_INTEGER timer, start, end;
+		float deltaTime;
+
 		QueryPerformanceFrequency(&timer);
 		QueryPerformanceCounter(&start);
 
@@ -66,6 +66,9 @@ int main()
 
 	// STL 해쉬 맵
 	{
+		LARGE_INTEGER timer, start, end;
+		float deltaTime;
+
 		QueryPerformanceFrequency(&timer);
 		QueryPerformanceCounter(&start);
 
@@ -95,7 +98,7 @@ int main()
 		//cout << "찾은 해쉬 데이터 개수 : " << findhashdata << endl;
 	}
 
-
+	// 해시 맵의 충돌 해시 계산 및 출력
 	hash.PrintCollisionHash();
 
 	return 0;
