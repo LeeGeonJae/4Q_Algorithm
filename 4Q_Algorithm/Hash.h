@@ -68,7 +68,7 @@ inline int HashMap<KeyType, ValueType>::GetHash(KeyType _key)
 		hash *= _FNV_prime;
 	}
 	
-	hash = (hash * 65523) % m_HashSize;
+	hash = (hash) % m_HashSize;
 
 	return hash;
 }
@@ -127,7 +127,7 @@ public:
 
 public:
 	bool Find(const string& _key);
-	int GetHash(string _key);
+	int GetHash(const string& _key);
 	void Insert(const string& _key, const ValueType& _value);
 	void Delete(const string& _key);
 
@@ -167,7 +167,7 @@ inline bool HashMap<string, ValueType>::Find(const string& _key)
 }
 
 template <typename ValueType>
-inline int HashMap<string, ValueType>::GetHash(string _key)
+inline int HashMap<string, ValueType>::GetHash(const string& _key)
 {
 	unsigned long long hash = 0;
 	unsigned int keySize = _key.size();
@@ -175,10 +175,10 @@ inline int HashMap<string, ValueType>::GetHash(string _key)
 	for (int i = 0; i < keySize; i++)
 	{
 		hash ^= _key[i];
-		hash *= _FNV_prime;
+		hash *= 65599;
 	}
 
-	hash = (hash * 65523) % m_HashSize;
+	hash = (hash) % m_HashSize;
 
 	return hash;
 }

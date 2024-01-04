@@ -4,7 +4,7 @@
 #include <random>
 #include <functional>
 
-const int HASH_DATA_SIZE = 50000;
+const int HASH_DATA_SIZE = 100000;
 const int HASH_MAP_SIZE = SHRT_MAX * 2;
 
 #include "Hash.h"
@@ -14,6 +14,8 @@ int main()
 {
 	srand(static_cast<unsigned int>(time(nullptr)));
 
+	LARGE_INTEGER timer, start, end;
+	float deltaTime;
 
 	// 해시 맵에 넣을 해시 데이터 배열 생성
 	vector<HashData> hashData;
@@ -25,7 +27,7 @@ int main()
 		HashData hashDataTemp;
 
 		int stringSize = (rand() % 10) + 3;
-		int tempValue = rand() % MAXINT16;
+		int tempValue = rand() % MAXINT16; 
 		float tempSpeed = rand() % 100;
 		string tempString;
 		tempString.resize(stringSize + 1);
@@ -43,13 +45,12 @@ int main()
 
 	// 해시맵 생성
 	HashMap<string, HashData> hash(HASH_MAP_SIZE);
+
+
 	unordered_map<string, HashData> hashmap(HASH_MAP_SIZE);
 
 	// 직접 만든 해쉬 맵
 	{
-		LARGE_INTEGER timer, start, end;
-		float deltaTime;
-
 		QueryPerformanceFrequency(&timer);
 		QueryPerformanceCounter(&start);
 
@@ -66,9 +67,6 @@ int main()
 
 	// STL 해쉬 맵
 	{
-		LARGE_INTEGER timer, start, end;
-		float deltaTime;
-
 		QueryPerformanceFrequency(&timer);
 		QueryPerformanceCounter(&start);
 
@@ -85,18 +83,45 @@ int main()
 	
 	// 해시 데이터 찾기
 	{
-		//int findhashdata = 0;
-		//for (auto data : hashData)
-		//{
-		//	if (hash.Find(data.GetName()))
-		//	{
-		//		cout << data.GetName() << " : " << hash.GetHash(data.GetName()) << endl;
-		//		findhashdata++;
-		//	}
-		//}
+		QueryPerformanceFrequency(&timer);
+		QueryPerformanceCounter(&start);
 
-		//cout << "찾은 해쉬 데이터 개수 : " << findhashdata << endl;
+		int findhashdata = 0;
+		for (auto data : hashData)
+		{
+			if (hash.Find(data.GetName()))
+			{
+				findhashdata++;
+			}
+		}
+
+		QueryPerformanceCounter(&end);
+
+		deltaTime = (end.QuadPart - start.QuadPart) / (float)timer.QuadPart;
+
+		cout << "해쉬 데이터 찾는데 걸린 시간(s) : " << deltaTime << endl;
+
+		cout << "찾은 해쉬 데이터 개수 : " << findhashdata << endl;
 	}
+
+	// 해시 데이터 찾기 (STL)
+	{
+		QueryPerformanceFrequency(&timer);
+		QueryPerformanceCounter(&start);
+
+		int findhashdata = 0;
+		for (auto data : hashData)
+		{
+			auto a = hashmap.find(data.GetName());
+		}
+
+		QueryPerformanceCounter(&end);
+
+		deltaTime = (end.QuadPart - start.QuadPart) / (float)timer.QuadPart;
+
+		cout << "STL 해쉬 데이터 찾는데 걸린 시간(s) : " << deltaTime << endl;
+	}
+
 
 	// 해시 맵의 충돌 해시 계산 및 출력
 	hash.PrintCollisionHash();
