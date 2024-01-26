@@ -1,0 +1,215 @@
+#include <functional> //std::function
+#include <iostream>
+#include <conio.h>
+#include <map>
+#include <thread>
+#include <concurrent_queue.h>
+using namespace Concurrency;
+
+using namespace std;
+
+// ¹» ÁÖ¹®Çß´Â°¡.
+enum class CMD_TYPE : unsigned short
+{
+	NONE = 0,
+	EÄ¿ÇÇ = 1,
+	E»÷µåÀ§Ä¡,
+	E¶±ººÀÌ
+};
+
+// ÁÖ¹®¼­ Å¸ÀÔ
+class CmdMsg
+{
+public:
+	CMD_TYPE cmdType;
+
+protected:
+	CmdMsg() { cmdType = CMD_TYPE::NONE; }
+};
+
+class CmdÄ¿ÇÇ : public CmdMsg
+{
+public:
+	CmdÄ¿ÇÇ(const char* type)
+	{
+		cmdType = CMD_TYPE::EÄ¿ÇÇ;
+		m_type = type;
+	}
+
+	string m_type;
+
+private:
+	CmdÄ¿ÇÇ() = delete;
+};
+
+class Cmd»÷µåÀ§Ä¡ : public CmdMsg
+{
+public:
+	Cmd»÷µåÀ§Ä¡(int type)
+	{
+		cmdType = CMD_TYPE::E»÷µåÀ§Ä¡;
+		m_type = type;
+	}
+
+	int m_type;
+
+private:
+	Cmd»÷µåÀ§Ä¡() = delete;
+};
+
+class Cmd¶±ººÀÌ : public CmdMsg
+{
+public:
+	Cmd¶±ººÀÌ(int param1, int param2)
+	{
+		cmdType = CMD_TYPE::E¶±ººÀÌ;
+		m_param1 = param1;
+		m_param2 = param2;
+	}
+
+	int m_param1;
+	int m_param2;
+
+private:
+	Cmd¶±ººÀÌ() = delete;
+};
+
+
+// Ã³¸® = ÇÔ¼ö
+void MakeÄ¿ÇÇ(string param)
+{
+	cout << param << " Ä¿ÇÇ ½ÃÅ°½Å ºÐ?" << endl;
+}
+
+void Make»÷µåÀ§Ä¡(int nParam1)
+{
+	if (nParam1 < 0 || nParam1 >= 2)
+	{
+		cout << "¾ÈÆÈ¾Æ" << endl;
+		return;
+	}
+
+	string »÷µåÀ§Ä¡Á¾·ù[2] = { "ÇÜ»÷µåÀ§Ä¡", "Ä¡Å²»÷µåÀ§Ä¡" };
+
+	cout << »÷µåÀ§Ä¡Á¾·ù[nParam1] << "½ÃÅ°½Å ºÐ?" << endl;
+}
+
+void Make¶±ººÀÌ(int nParam1, int nParam2)
+{
+	if (nParam1 < 0 || nParam1 >= 2 || nParam2 < 0 || nParam2 >= 2)
+	{
+		cout << "¾ÈÆÈ¾Æ" << endl;
+		return;
+	}
+
+	string ¶±ººÀÌÁ¾·ù[2] = { "¸Å¿î¶±ººÀÌ", "·ÎÁ¦¶±ººÀÌ" };
+	string »çÀÌÁî[2] = { "º¸Åë", "Æ¯´ë" };
+
+	cout << ¶±ººÀÌÁ¾·ù[nParam1] << " " << »çÀÌÁî[nParam2] << " ½ÃÅ°½Å ºÐ?" << endl;
+
+}
+
+class CmdDiapatcher
+{
+public:
+	void InitCommand()
+	{
+		m_cmdMap.emplace(CMD_TYPE::EÄ¿ÇÇ, [](CmdMsg* cmdMsg) {
+			CmdÄ¿ÇÇ* pCmd = reinterpret_cast<CmdÄ¿ÇÇ*>(cmdMsg);
+			MakeÄ¿ÇÇ(pCmd->m_type);
+			});
+
+		m_cmdMap.emplace(CMD_TYPE::E»÷µåÀ§Ä¡, [](CmdMsg* cmdMsg) {
+			Cmd»÷µåÀ§Ä¡* pCmd = reinterpret_cast<Cmd»÷µåÀ§Ä¡*>(cmdMsg);
+			Make»÷µåÀ§Ä¡(pCmd->m_type);
+			});
+
+		m_cmdMap.emplace(CMD_TYPE::E¶±ººÀÌ, [](CmdMsg* cmdMsg) {
+			Cmd¶±ººÀÌ* pCmd = reinterpret_cast<Cmd¶±ººÀÌ*>(cmdMsg);
+			Make¶±ººÀÌ(pCmd->m_param1, pCmd->m_param2);
+			});
+	}
+
+	void DispatchCommand(CmdMsg* cmdMsg)
+	{
+		auto cmdFun = FindCommand(cmdMsg);
+		cmdFun(cmdMsg);
+	}
+
+	//void FindCommand(CmdMsg* cmdMsg)
+	std::function<void(CmdMsg*)> FindCommand(CmdMsg* cmdMsg)
+	{
+		CmdMsg* cmd = reinterpret_cast<CmdMsg*>(cmdMsg);
+
+		auto it = m_cmdMap.find(cmd->cmdType);
+		if (it == m_cmdMap.end()) std::terminate();
+		return it->second;
+	}
+
+private:
+	std::map<CMD_TYPE, std::function<void(CmdMsg*)> > m_cmdMap;
+};
+
+int main()
+{
+	cout << "hardware_concurrency : " << std::thread::hardware_concurrency() << endl;
+
+	// ÇÔ¼ö °´Ã¼ È°¿ë
+	CmdDiapatcher _cmdDispatcher;
+	_cmdDispatcher.InitCommand();
+
+
+	concurrent_queue<shared_ptr<CmdMsg>> msgQueue;
+
+	auto workFun = ([&_cmdDispatcher, &msgQueue]
+		{
+			int count = 0;
+			while (count < 10)
+			{
+				shared_ptr<CmdMsg> Cmd;
+				if (msgQueue.try_pop(Cmd))
+				{
+					_cmdDispatcher.DispatchCommand(Cmd.get());
+					++count;
+
+					// ¿©±â¿¡ current thread id¸¦ Ãâ·ÂÇØ º¸¼¼¿ä.
+				}
+			}
+
+			cout << "Àå»ç ³¡!" << endl;
+
+		} // ´Ù¸¥ ½º·¹µå!!
+	);
+
+	// thread ¾ß ÀÌ ÀÏÁ» ÇØÁà (worker ÇÔ¼ö) -> (worker °´Ã¼)
+	std::thread workerThread(workFun);
+
+	// ¿©±ä ¸ÞÀÎ ½º·¹µå
+	int KeyInfo;
+
+	do
+	{
+		KeyInfo = _getch();
+
+		if (tolower(KeyInfo) == '1')
+		{
+			shared_ptr<CmdMsg> cmdMsg(new CmdÄ¿ÇÇ("¾Æ¾Æ"));
+			msgQueue.push(cmdMsg);
+		}
+		else if (tolower(KeyInfo) == '2')
+		{
+			shared_ptr<CmdMsg> cmdMsg(new Cmd»÷µåÀ§Ä¡(1));
+			msgQueue.push(cmdMsg);
+		}
+		else if (tolower(KeyInfo) == '3')
+		{
+			shared_ptr<CmdMsg> cmdMsg(new Cmd¶±ººÀÌ(1, 1));
+			msgQueue.push(cmdMsg);
+		}
+
+	} while (tolower(KeyInfo) != 'q');
+
+	workerThread.join();
+
+	system("pause");
+}
